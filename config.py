@@ -3,13 +3,14 @@ from pydantic import Field, field_validator
 from typing import Optional
 
 class Settings(BaseSettings):
-    github_token: str = Field(..., description="GitHub API token")
+    # need this for github api access
+    github_token: str = Field(..., description="need this for github api")
     github_api_base: str = Field(
         default="https://api.github.com",
-        description="GitHub API base URL"
+        description="where to send our requests"
     )
     
-    # Client settings
+    # how our client should behave
     request_timeout: int = 30
     max_retries: int = 3
     connection_pool_size: int = 100
@@ -29,8 +30,9 @@ class Settings(BaseSettings):
 
     @field_validator('github_token')
     def validate_token(cls, v):
+        """make sure we got a token"""
         if not v:
-            raise ValueError('GitHub token is required')
+            raise ValueError('hey, we need a github token!')
         return v
 
     model_config = SettingsConfigDict(

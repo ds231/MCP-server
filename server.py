@@ -20,19 +20,19 @@ import time
 import json
 from config import settings
 
-# hey this is a test change to check if git push works correctly!
+# ok lets setup our logs first so we can debug stuff
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
 
-# Initialize encryption key (store this securely!)
+# gotta keep our secrets safe
 ENCRYPTION_KEY = Fernet.generate_key()
 fernet = Fernet(ENCRYPTION_KEY)
 
-# Rate limiting settings
-RATE_LIMIT = settings.rate_limit_requests  # requests per minute
+# dont wanna get blocked by github rate limits
+RATE_LIMIT = settings.rate_limit_requests
 rate_limit_storage = {}
 
-# Initialize cache
+# cache stuff to make it faster
 repo_cache = TTLCache(
     maxsize=settings.cache_max_size, 
     ttl=settings.repo_cache_ttl
@@ -88,8 +88,10 @@ app = FastAPI(title="GitHub MCP Server")
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 def validate_github_token(token: str) -> bool:
-    """Validate GitHub token format."""
-    # GitHub tokens are 40 chars for classic or start with ghp_ for fine-grained
+    """gotta make sure the token looks legit"""
+    if not token:
+        return False
+    # github tokens are either 40 chars or start with ghp_
     pattern = r'^(ghp_[A-Za-z0-9_]{36}|[A-Za-z0-9_]{40})$'
     return bool(re.match(pattern, token))
 

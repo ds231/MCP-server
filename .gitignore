@@ -1,3 +1,4 @@
+# dont want any of these in git
 .env
 __pycache__/
 *.pyc

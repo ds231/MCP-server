@@ -6,7 +6,7 @@ from .server import app
 client = TestClient(app)
 
 def test_get_repository_details():
-    """Test repository details endpoint"""
+    """lets check if we can get repo details"""
     response = client.get("/repository/microsoft/vscode")
     assert response.status_code == 200
     data = response.json()
@@ -38,8 +38,8 @@ def test_invalid_repository():
     assert response.status_code == 404
 
 def test_rate_limiting():
-    """Test rate limiting"""
-    for _ in range(101):  # Exceed rate limit
+    """lets make sure rate limiting stops too many requests"""
+    for _ in range(101):  # try to overload it
         client.get("/repository/microsoft/vscode")
     response = client.get("/repository/microsoft/vscode")
     assert response.status_code == 429
