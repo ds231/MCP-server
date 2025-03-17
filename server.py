@@ -32,7 +32,7 @@ async def get_github_headers():
             detail="GitHub token not configured. Please check your .env file."
         )
     return {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Authorization": f"token {GITHUB_TOKEN}",  # Changed from "Bearer" to "token"
         "Accept": "application/vnd.github.v3+json"
     }
 
