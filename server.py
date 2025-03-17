@@ -20,7 +20,7 @@ import time
 import json
 from config import settings
 
-# Configure logging
+# hey this is a test change to check if git push works correctly!
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
 
