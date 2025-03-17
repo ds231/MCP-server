@@ -1,10 +1,13 @@
-from pydantic import BaseSettings, validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator
 from typing import Optional
 
 class Settings(BaseSettings):
-    # GitHub settings
-    github_token: str
-    github_api_base: str = "https://api.github.com"
+    github_token: str = Field(..., description="GitHub API token")
+    github_api_base: str = Field(
+        default="https://api.github.com",
+        description="GitHub API base URL"
+    )
     
     # Client settings
     request_timeout: int = 30
@@ -24,14 +27,16 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
-    @validator('github_token')
+    @field_validator('github_token')
     def validate_token(cls, v):
         if not v:
             raise ValueError('GitHub token is required')
         return v
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file='.env',
+        case_sensitive=False,
+        env_file_encoding='utf-8'
+    )
 
 settings = Settings()

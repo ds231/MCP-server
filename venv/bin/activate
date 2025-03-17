@@ -35,7 +35,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="/Users/devanshusingh/Downloads/Staywell_Frontend/mcp_github_server/venv"
+VIRTUAL_ENV="/Users/devanshusingh/Downloads/everday_series_assignment/mcp_github_server/venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"

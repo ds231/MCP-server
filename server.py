@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException, Depends, Request, Response
-from pydantic import BaseModel, constr, validator, Field
+from fastapi import FastAPI, HTTPException, Depends, Request, Response, Path, Query
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Annotated
 import httpx
 import os
 from typing import List, Optional, Dict, Any, Tuple
@@ -17,7 +18,7 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 from starlette.responses import Response as StarletteResponse
 import time
 import json
-from .config import settings
+from config import settings
 
 # Configure logging
 logging.basicConfig(level=settings.log_level)
@@ -219,46 +220,43 @@ async def log_request_details(request_id: str, owner: str, repo: str, extra: Dic
     logger.info(f"Request details: {log_data}")
 
 class RepositoryParams(BaseModel):
-    owner: constr(min_length=1, max_length=39, pattern=r"^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$")
-    repo: constr(min_length=1, max_length=100, pattern=r"^[a-zA-Z0-9_.-]+$")
+    owner: str = Field(
+        min_length=1,
+        max_length=39,
+        pattern=r"^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$"
+    )
+    repo: str = Field(
+        min_length=1,
+        max_length=100,
+        pattern=r"^[a-zA-Z0-9_.-]+$"
+    )
 
-    @validator('owner')
-    def validate_owner(cls, v):
-        if v.lower() in ['none', 'undefined', 'null']:
-            raise ValueError('Invalid owner name')
-        return v
+    model_config = ConfigDict(str_strip_whitespace=True)
 
-    @validator('repo')
-    def validate_repo(cls, v):
-        if v.lower() in ['none', 'undefined', 'null']:
-            raise ValueError('Invalid repository name')
-        return v
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        if value.lower() in ['none', 'undefined', 'null']:
+            raise ValueError('Invalid name')
+        return value
+
+    @classmethod
+    def validate_owner(cls, value: str) -> str:
+        value = cls.validate_name(value)
+        if '--' in value:
+            raise ValueError('Name cannot contain consecutive hyphens')
+        return value
 
 class Issue(BaseModel):
-    title: constr(min_length=1, max_length=256)
-    body: constr(min_length=1, max_length=65536)
-    labels: Optional[List[constr(min_length=1, max_length=50)]] = Field(default=None, max_items=10)
+    title: str = Field(min_length=1, max_length=256)
+    body: str = Field(min_length=1, max_length=65536)
+    labels: list[str] | None = Field(default=None, max_items=10)
 
-    @validator('title')
-    def validate_title(cls, v):
-        if not v.strip():
-            raise ValueError('Title cannot be empty or whitespace')
-        return v.strip()
-
-    @validator('body')
-    def validate_body(cls, v):
-        if not v.strip():
-            raise ValueError('Body cannot be empty or whitespace')
-        return v.strip()
+    model_config = ConfigDict(str_strip_whitespace=True)
 
 class Comment(BaseModel):
-    body: constr(min_length=1, max_length=65536)
-
-    @validator('body')
-    def validate_body(cls, v):
-        if not v.strip():
-            raise ValueError('Comment body cannot be empty or whitespace')
-        return v.strip()
+    body: str = Field(min_length=1, max_length=65536)
+    
+    model_config = ConfigDict(str_strip_whitespace=True)
 
 async def batch_github_requests(
     client: GitHubClient,
@@ -433,8 +431,8 @@ async def list_issues(
 @app.post("/repository/{owner}/{repo}/issues")
 async def create_issue(
     request: Request,
-    params: RepositoryParams = Depends(),
     issue: Issue,
+    params: RepositoryParams = Depends(),
     headers: dict = Depends(get_github_headers)
 ):
     """Create a new issue with validation."""
@@ -499,12 +497,14 @@ async def create_issue(
 @app.post("/repository/{owner}/{repo}/issues/{issue_number}/comments")
 async def create_comment(
     request: Request,
-    params: RepositoryParams = Depends(),
-    issue_number: constr(regex=r"^\d+$"),
+    owner: Annotated[str, Path(...)],
+    repo: Annotated[str, Path(...)],
+    issue_number: Annotated[int, Path(ge=1)],
     comment: Comment,
     headers: dict = Depends(get_github_headers)
 ):
     """Post a comment with validation."""
+    params = RepositoryParams(owner=owner, repo=repo)
     request_id = str(uuid.uuid4())
     await log_request_details(request_id, params.owner, params.repo)
     
